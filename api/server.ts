@@ -1,17 +1,28 @@
+import 'dotenv/config';
+
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import { Redis } from "@upstash/redis";
 import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { RequestInfo } from "@modelcontextprotocol/sdk/types.js";
 
-const redis = Redis.fromEnv();
+const redis = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
 function getMemoryKey(userEmail: string): string {
     return `memory:${userEmail}`;
 }
 
-function getUser(request: Request): string | null {
-    const userEmail = request.headers.get("x-user-email");
-    return userEmail;
+function getUser(request: RequestInfo | undefined) {
+    if (request && request.headers) {
+        const userEmail = request.headers['x-user-email']
+        return userEmail;
+    } else {
+        return;
+    }
+
 }
 
 const handler = createMcpHandler((server) => {
@@ -26,8 +37,8 @@ const handler = createMcpHandler((server) => {
                 ),
             }
         },
-        async ({ record }, { request }) => {
-            const user = getUser(request);
+        async ({ record }, { requestInfo }) => {
+            const user = getUser(requestInfo);
 
             if (!user) {
                 return {
@@ -83,8 +94,8 @@ const handler = createMcpHandler((server) => {
                 index: z.number().int().describe("Index of the memory item to remove."),
             }
         },
-        async ({ index }, { request }) => {
-            const user = getUser(request);
+        async ({ index }, { requestInfo }) => {
+            const user = getUser(requestInfo);
 
             if (!user) {
                 return {
@@ -142,7 +153,7 @@ const handler = createMcpHandler((server) => {
             title: 'Recall Resource',
             description: 'Recall all stored memory items for the user.',
         },
-        async ({ request }) => {
+        async (uri, { request }) => {
             const user = getUser(request);
 
             if (!user) {
