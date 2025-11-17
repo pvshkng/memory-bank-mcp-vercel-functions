@@ -1,4 +1,5 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
@@ -52,7 +53,6 @@ const handler = createMcpHandler((server) => {
             }
 
             const key = getMemoryKey(user);
-
             try {
                 const exists = await redis.exists(key);
 
@@ -148,19 +148,20 @@ const handler = createMcpHandler((server) => {
 
     server.registerResource(
         "memory.recall",
-        new ResourceTemplate('resource://memory.recall', { list: undefined }),
+        "resource://memory.recall",
         {
             title: 'Recall Resource',
             description: 'Recall all stored memory items for the user.',
+            mimeType: 'text/plain'
         },
-        async (uri, { request }) => {
-            const user = getUser(request);
+        async (uri, { requestInfo }) => {
+            const user = getUser(requestInfo);
 
             if (!user) {
                 return {
                     contents: [
                         {
-                            uri: "resource://memory.recall",
+                            uri: uri.href,
                             mimeType: "application/json",
                             text: JSON.stringify({ error: "User not found" }),
                         },
@@ -177,7 +178,7 @@ const handler = createMcpHandler((server) => {
                 return {
                     contents: [
                         {
-                            uri: "resource://memory.recall",
+                            uri: uri.href,
                             mimeType: "application/json",
                             text: JSON.stringify(memoryData),
                         },
